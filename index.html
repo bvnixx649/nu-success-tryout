@@ -38,6 +38,12 @@
   .seg button[aria-pressed="true"] span { color: #52525b }
   .seg button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
 
+  /* Start: only the four letters, nothing of the result shows before a tap */
+  .start { min-height: calc(100dvh - 52px); display: grid; place-content: center }
+  .start .seg { grid-template-columns: repeat(2, 132px); gap: 14px }
+  .start .seg button { height: 132px; border-radius: 28px }
+  .start .seg button b { font-size: 44px }
+
   /* Real claim page */
   .head { display: flex; align-items: center; gap: 16px; background: var(--surface); border-radius: 22px; padding: 16px; margin-bottom: 32px }
   .head div { flex: 1; min-width: 0 }
@@ -201,41 +207,11 @@
     app.classList.toggle('has-bar', on)
   }
 
-  function form() {
-    clear(); showBar(false)
-    app.innerHTML = `
-      <div class="view">
-        <div class="pick"><div class="seg" id="seg"></div></div>
-        <header class="head"><div><p>สแกนเข้าร่วมกิจกรรม</p><p>${TITLE}</p></div><span class="chip num">6 ชั่วโมง</span></header>
-        <form id="f" novalidate>
-          <div class="field"><label for="sid">รหัสนิสิต</label><input id="sid" inputmode="numeric" autocomplete="off" enterkeyhint="next" maxlength="8" placeholder="8 หลัก" value="${esc(state.id)}"></div>
-          <div class="field"><label for="sname">ชื่อ-นามสกุล (ภาษาไทย)</label><input id="sname" autocomplete="name" enterkeyhint="done" value="${esc(state.name)}"></div>
-          <p class="remember">จดจำข้อมูลบนอุปกรณ์นี้</p>
-          <button class="btn accent" type="submit">รับชั่วโมง</button>
-        </form>
-      </div>`
-    seg(document.getElementById('seg'))
-    const sid = document.getElementById('sid')
-    sid.addEventListener('input', () => { sid.value = sid.value.replace(/\D/g, '') })
-    document.getElementById('f').addEventListener('submit', (e) => {
-      e.preventDefault()
-      state.id = sid.value.trim()
-      state.name = document.getElementById('sname').value.trim()
-      document.activeElement && document.activeElement.blur()
-      SFX.unlock()
-      checking()
-    })
-  }
-
-  function checking() {
+  function start() {
     clear(); showBar(false); scrollTo(0, 0)
-    app.innerHTML = `
-      <div class="view">
-        <header class="head"><div><p>สแกนเข้าร่วมกิจกรรม</p><p>${TITLE}</p></div><span class="chip num">6 ชั่วโมง</span></header>
-        <div class="checking" role="status"><div class="pulse"><i></i><i></i><span><svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M247.89 136.27a56 56 0 0 1-55.89 55.73H72a56 56 0 1 1 19.82-108.37A80 80 0 0 1 247.89 136.27ZM165.66 122.34l-32-32a8 8 0 0 0-11.32 0l-32 32a8 8 0 0 0 11.32 11.32L120 115.31V168a8 8 0 0 0 16 0v-52.69l18.34 18.35a8 8 0 0 0 11.32-11.32Z"/></svg></span></div><p>กำลังบันทึก</p></div>
-      </div>`
-    state.at = new Date()
-    later(success, 1200)
+    app.innerHTML = `<div class="view start"><div class="seg" id="seg"></div></div>`
+    seg(document.getElementById('seg'), () => { SFX.unlock(); success() })
+    app.querySelectorAll('#seg [aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', 'false'))
   }
 
   const CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5.5 12.5l4 4 9-9"/></svg>'
@@ -259,7 +235,7 @@
     const k = state.k
     const id = state.id || '66310001'
     const name = state.name || 'นิสิต ทดลอง'
-    const at = state.at
+    const at = (state.at = new Date())
     const t1 = new Date(at - 120000), t2 = new Date(at - 60000)
     const title = `<h1 class="title">${TITLE}</h1><p class="date num">${thDate(at)} เวลา ${hhmm(at)} น.</p>`
     app.innerHTML = `
@@ -281,7 +257,7 @@
         </div>
       </div>`
     app.querySelectorAll('.cnt').forEach(count)
-    document.getElementById('done').onclick = form
+    document.getElementById('done').onclick = start
     if (k === 'b') SFX.sweep(0.52)
     later(() => SFX.chime(SOUND.chime), CHIME_AT[k])
     // Android vibrates with the check, as the real app does. iPhone ignores this.
@@ -307,7 +283,7 @@
 
   seg(document.getElementById('barseg'))
   document.getElementById('again').onclick = () => { SFX.unlock(); success() }
-  form()
+  start()
 </script>
 </body>
 </html>
