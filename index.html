@@ -174,7 +174,7 @@
     { k: 'd', name: 'ป้ายทับวง' },
     { k: 'f', name: 'ประโยค' },
   ]
-  // How long each design takes to settle, so the tryout bar waits 3 s after the last thing moves.
+  // How long each design takes to settle, so the tryout bar waits 1.8 s after the last thing moves.
   const SETTLE = { a: 1500, b: 1950, d: 1500, f: 1500 }
   const TITLE = 'บริจาคโลหิต ครั้งที่ 2/2569'
   const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
@@ -262,7 +262,7 @@
     later(() => SFX.chime(SOUND.chime), CHIME_AT[k])
     // Android vibrates with the check, as the real app does. iPhone ignores this.
     later(() => navigator.vibrate && navigator.vibrate([35, 60, 45]), k === 'b' ? 650 : 300)
-    later(() => showBar(true), SETTLE[k] + 3000)
+    later(() => showBar(true), SETTLE[k] + 1800)
   }
 
   function count(el) {
