@@ -37,69 +37,43 @@
     <p>เปิดเสียงเครื่องก่อน iPhone ต้องปิดโหมดเงียบด้วย</p>
   </div>
 
-  <section>
-    <h2>เสียงได้รางวัล</h2>
-    <div class="row" id="chimes"></div>
-  </section>
-
-  <section>
-    <h2>เสียงตัวเลขวิ่ง 0 ถึง 6</h2>
-    <div class="row" id="ticks"></div>
-  </section>
-
-  <section>
-    <h2>เสียงวงวาด (แบบ B)</h2>
-    <div class="row"><button type="button" id="sweep">วงวาด</button></div>
-  </section>
-
   <section class="demo">
-    <h2>ลองรวมกัน</h2>
-    <div class="row" id="pickChime"></div>
-    <div class="row" id="pickTick"></div>
     <div class="stage" id="stage"><div class="disc"><svg viewBox="0 0 24 24"><path d="M5.5 12.5l4 4 9-9"/></svg></div><span class="big">+<span id="n">6</span></span></div>
-    <button type="button" class="go" id="go">เล่น</button>
+    <div class="row" id="combos"></div>
   </section>
 </main>
 <script src="sfx.js"></script>
 <script>
-  const NAMES = { coin: '1 ติ่งติ้ง', bell: '2 ระฆัง', marimba: '3 ไม้', sparkle: '4 ประกาย', pay: '5 จ่ายเงิน', click: 'คลิก', rise: 'โน้ตไต่ขึ้น', wood: 'ไม้เคาะ', none: 'ไม่มี' }
-  const pick = { chime: 'coin', tick: 'rise' }
-
+  const COMBOS = [
+    { name: 'ไม้', chime: 'marimba', tick: 'none' },
+    { name: 'ไม้ + เคาะ', chime: 'marimba', tick: 'wood' },
+    { name: 'จ่ายเงิน', chime: 'pay', tick: 'none' },
+    { name: 'จ่ายเงิน + เคาะ', chime: 'pay', tick: 'wood' },
+  ]
   // Ticks follow the same ease-out timing as the number on screen.
   function runTicks(k, delay, el) {
     const dur = 820, t0 = performance.now() + delay
     let last = 0
-    if (el) el.textContent = 0
+    el.textContent = 0
     const step = (now) => {
       const p = Math.min(1, Math.max(0, (now - t0) / dur))
       const v = Math.round(6 * (1 - Math.pow(1 - p, 3)))
-      if (v !== last) { last = v; if (k !== 'none') SFX.tick(k, v); if (el) el.textContent = v }
+      if (v !== last) { last = v; if (k !== 'none') SFX.tick(k, v); el.textContent = v }
       if (p < 1) requestAnimationFrame(step)
     }
     requestAnimationFrame(step)
   }
-
-  const btns = (id, keys, fn) => {
-    const el = document.getElementById(id)
-    el.innerHTML = keys.map((k) => `<button type="button" data-k="${k}">${NAMES[k]}</button>`).join('')
-    el.onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) { SFX.unlock(); fn(b.dataset.k, el) } }
-    return el
-  }
-  btns('chimes', SFX.chimes, (k) => SFX.chime(k))
-  btns('ticks', SFX.ticks, (k) => runTicks(k, 0))
-  document.getElementById('sweep').onclick = () => { SFX.unlock(); SFX.sweep() }
-
-  const mark = (el, k) => el.querySelectorAll('[data-k]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.k === k))
-  const pc = btns('pickChime', SFX.chimes, (k, el) => { pick.chime = k; mark(el, k) })
-  const pt = btns('pickTick', [...SFX.ticks, 'none'], (k, el) => { pick.tick = k; mark(el, k) })
-  mark(pc, pick.chime); mark(pt, pick.tick)
-
-  document.getElementById('go').onclick = () => {
+  const el = document.getElementById('combos')
+  el.innerHTML = COMBOS.map((c, i) => `<button type="button" data-i="${i}">${c.name}</button>`).join('')
+  el.onclick = (e) => {
+    const b = e.target.closest('[data-i]')
+    if (!b) return
+    const c = COMBOS[+b.dataset.i]
     SFX.unlock()
     const st = document.getElementById('stage')
     st.classList.remove('play'); void st.offsetWidth; st.classList.add('play')
-    setTimeout(() => SFX.chime(pick.chime), 220)
-    runTicks(pick.tick, 300, document.getElementById('n'))
+    setTimeout(() => SFX.chime(c.chime), 220)
+    runTicks(c.tick, 300, document.getElementById('n'))
   }
 </script>
 </body>

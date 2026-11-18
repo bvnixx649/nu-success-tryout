@@ -23,7 +23,7 @@
   html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55 }
   button, input { font: inherit; color: inherit }
   main { max-width: 448px; margin: 0 auto; min-height: 100dvh; padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(32px + env(safe-area-inset-bottom, 0px)) }
-  main.has-bar { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)) }
+  main.has-bar { padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)) }
   .num { font-family: var(--num); font-variant-numeric: tabular-nums }
   .center { text-align: center }
 
@@ -154,6 +154,12 @@
   .bar > div { max-width: 448px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px }
   .bar .seg button { padding: 6px 4px }
   .bar .seg button b { font-size: 16px }
+  .seg.two { grid-template-columns: repeat(2, 1fr) }
+  .seg.two button b { font-size: 15px }
+  .bar .seg.two button { min-height: 40px }
+  .start .seg.two { grid-template-columns: repeat(2, 132px); margin-top: 22px }
+  .start .seg.two button { height: 52px; border-radius: 16px }
+  .start .seg.two button b { font-size: 15px }
   .bar .btn { min-height: 48px; background: var(--accent-strong); color: var(--on-accent) }
 </style>
 </head>
@@ -162,6 +168,7 @@
 <div class="bar" id="bar" aria-hidden="true">
   <div>
     <div class="seg" id="barseg"></div>
+    <div class="seg two" id="barsnd"></div>
     <button class="btn" type="button" id="again">แสดงใหม่</button>
   </div>
 </div>
@@ -178,7 +185,15 @@
   const SETTLE = { a: 1500, b: 1950, d: 1500, f: 1500 }
   const TITLE = 'บริจาคโลหิต ครั้งที่ 2/2569'
   const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-  const state = { k: 'a', id: '', name: '', at: new Date() }
+  // Sound choices: the wooden chime or the payment chime, each with or without a wood knock while the number counts.
+  const SOUNDS = [
+    { k: 'm', name: 'ไม้', chime: 'marimba', tick: 'none' },
+    { k: 'mt', name: 'ไม้ + เคาะ', chime: 'marimba', tick: 'wood' },
+    { k: 'p', name: 'จ่ายเงิน', chime: 'pay', tick: 'none' },
+    { k: 'pt', name: 'จ่ายเงิน + เคาะ', chime: 'pay', tick: 'wood' },
+  ]
+  const state = { k: 'a', s: 'm', id: '', name: '', at: new Date() }
+  const sound = () => SOUNDS.find((o) => o.k === state.s)
   const app = document.getElementById('app')
   const bar = document.getElementById('bar')
   let timers = []
@@ -190,18 +205,24 @@
   const clear = () => { timers.forEach(clearTimeout); timers = [] }
 
   function seg(el, onPick) {
-    el.innerHTML = OPTIONS.map((o) => `<button type="button" data-k="${o.k}" aria-pressed="${o.k === state.k}"><b>${o.k.toUpperCase()}</b></button>`).join('')
+    pickList(el, OPTIONS, 'k', (o) => o.k.toUpperCase(), onPick)
+  }
+  function sndSeg(el) {
+    pickList(el, SOUNDS, 's', (o) => o.name, () => { SFX.unlock(); SFX.chime(sound().chime) })
+  }
+  function pickList(el, list, key, label, onPick) {
+    el.innerHTML = list.map((o) => `<button type="button" data-k="${o.k}" aria-pressed="${o.k === state[key]}"><b>${label(o)}</b></button>`).join('')
     el.onclick = (e) => {
       const b = e.target.closest('[data-k]')
       if (!b) return
-      state.k = b.dataset.k
-      el.querySelectorAll('[data-k]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.k === state.k))
+      state[key] = b.dataset.k
+      el.querySelectorAll('[data-k]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.k === state[key]))
       onPick && onPick()
     }
   }
 
   function showBar(on) {
-    if (on) seg(document.getElementById('barseg'))
+    if (on) { seg(document.getElementById('barseg')); sndSeg(document.getElementById('barsnd')) }
     bar.classList.toggle('show', on)
     bar.setAttribute('aria-hidden', !on)
     app.classList.toggle('has-bar', on)
@@ -209,25 +230,23 @@
 
   function start() {
     clear(); showBar(false); scrollTo(0, 0)
-    app.innerHTML = `<div class="view start"><div class="seg" id="seg"></div></div>`
+    app.innerHTML = `<div class="view start"><div class="seg" id="seg"></div><div class="seg two" id="snd"></div></div>`
     seg(document.getElementById('seg'), () => { SFX.unlock(); success() })
     app.querySelectorAll('#seg [aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', 'false'))
+    sndSeg(document.getElementById('snd'))
   }
 
   const CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5.5 12.5l4 4 9-9"/></svg>'
   const cnt = (to, from, delay, tick) => `<span class="cnt" data-to="${to}" data-from="${from}" data-delay="${delay}"${tick ? ' data-tick' : ''}>${to}</span>`
 
-  // Sound per design. The number only ticks where it is the big thing on screen (A and B). ?chime=bell&tick=wood overrides for trying others.
-  const q = new URLSearchParams(location.search)
-  const SOUND = { chime: q.get('chime') || 'coin', tick: q.get('tick') || 'rise' }
   const CHIME_AT = { a: 220, b: 600, d: 220, f: 220 }
 
   function hero(k, title) {
     const hrs = (delay) => `<p class="hrs"><span class="big num">+${cnt(6, 0, delay, true)}</span><span class="u">ชั่วโมง</span></p>`
     if (k === 'a') return `<div class="center"><div class="disc pop">${CHECK}</div><div class="up1">${hrs(300)}<p class="ok">บันทึกชั่วโมงแล้ว</p></div><div class="up2">${title}</div></div>`
     if (k === 'b') return `<div class="center"><svg class="draw" viewBox="0 0 128 128" aria-hidden="true"><g transform="rotate(-90 64 64)"><circle class="ring" cx="64" cy="64" r="58" pathLength="1"/></g><path class="tick" pathLength="1" d="M38 66l18 18 36-38"/></svg><div class="up1">${hrs(600)}</div><div class="up2">${title}</div></div>`
-    if (k === 'd') return `<div class="center"><div class="wrap"><div class="disc pop">${CHECK}</div><span class="pill num">+${cnt(6, 0, 380)} ชั่วโมง</span></div><div class="up2">${title}</div></div>`
-    return `<div class="center"><div class="disc pop">${CHECK}</div><p class="say up1">ได้รับ <span class="big num">${cnt(6, 0, 300)}</span> ชั่วโมง</p><div class="up2">${title}</div></div>`
+    if (k === 'd') return `<div class="center"><div class="wrap"><div class="disc pop">${CHECK}</div><span class="pill num">+${cnt(6, 0, 380, true)} ชั่วโมง</span></div><div class="up2">${title}</div></div>`
+    return `<div class="center"><div class="disc pop">${CHECK}</div><p class="say up1">ได้รับ <span class="big num">${cnt(6, 0, 300, true)}</span> ชั่วโมง</p><div class="up2">${title}</div></div>`
   }
 
   function success() {
@@ -259,7 +278,7 @@
     app.querySelectorAll('.cnt').forEach(count)
     document.getElementById('done').onclick = start
     if (k === 'b') SFX.sweep(0.52)
-    later(() => SFX.chime(SOUND.chime), CHIME_AT[k])
+    later(() => SFX.chime(sound().chime), CHIME_AT[k])
     // Android vibrates with the check, as the real app does. iPhone ignores this.
     later(() => navigator.vibrate && navigator.vibrate([35, 60, 45]), k === 'b' ? 650 : 300)
     later(() => showBar(true), SETTLE[k] + 1800)
@@ -267,14 +286,15 @@
 
   function count(el) {
     const to = +el.dataset.to, from = +el.dataset.from, delay = +el.dataset.delay, dur = 820
-    const ticks = el.hasAttribute('data-tick') && SOUND.tick !== 'none'
+    const tk = sound().tick
+    const ticks = el.hasAttribute('data-tick') && tk !== 'none'
     let last = from
     el.textContent = from
     const t0 = performance.now() + delay
     const tick = (now) => {
       const p = Math.min(1, Math.max(0, (now - t0) / dur))
       const v = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)))
-      if (v !== last) { last = v; if (ticks) SFX.tick(SOUND.tick, v) }
+      if (v !== last) { last = v; if (ticks) SFX.tick(tk, v) }
       el.textContent = v
       if (p < 1 && el.isConnected) requestAnimationFrame(tick)
     }
