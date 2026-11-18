@@ -23,7 +23,7 @@
   html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55 }
   button, input { font: inherit; color: inherit }
   main { max-width: 448px; margin: 0 auto; min-height: 100dvh; padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(32px + env(safe-area-inset-bottom, 0px)) }
-  main.has-bar { padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)) }
+  main.has-bar { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)) }
   .num { font-family: var(--num); font-variant-numeric: tabular-nums }
   .center { text-align: center }
 
@@ -168,7 +168,6 @@
 <div class="bar" id="bar" aria-hidden="true">
   <div>
     <div class="seg" id="barseg"></div>
-    <div class="seg two" id="barsnd"></div>
     <button class="btn" type="button" id="again">แสดงใหม่</button>
   </div>
 </div>
@@ -185,13 +184,8 @@
   const SETTLE = { a: 1500, b: 1950, d: 1500, f: 1500 }
   const TITLE = 'บริจาคโลหิต ครั้งที่ 2/2569'
   const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-  // Sound choices: the wooden chime or the payment chime, each with or without a wood knock while the number counts.
-  const SOUNDS = [
-    { k: 'm', name: 'ไม้', chime: 'marimba', tick: 'none' },
-    { k: 'mt', name: 'ไม้ + เคาะ', chime: 'marimba', tick: 'wood' },
-    { k: 'p', name: 'จ่ายเงิน', chime: 'pay', tick: 'none' },
-    { k: 'pt', name: 'จ่ายเงิน + เคาะ', chime: 'pay', tick: 'wood' },
-  ]
+  // Every design plays the same wooden chime with the check, and nothing else.
+  const SOUNDS = [{ k: 'm', name: 'ไม้', chime: 'marimba', tick: 'none' }]
   const state = { k: 'a', s: 'm', id: '', name: '', at: new Date() }
   const sound = () => SOUNDS.find((o) => o.k === state.s)
   const app = document.getElementById('app')
@@ -222,7 +216,7 @@
   }
 
   function showBar(on) {
-    if (on) { seg(document.getElementById('barseg')); sndSeg(document.getElementById('barsnd')) }
+    if (on) { seg(document.getElementById('barseg')) }
     bar.classList.toggle('show', on)
     bar.setAttribute('aria-hidden', !on)
     app.classList.toggle('has-bar', on)
@@ -230,10 +224,9 @@
 
   function start() {
     clear(); showBar(false); scrollTo(0, 0)
-    app.innerHTML = `<div class="view start"><div class="seg" id="seg"></div><div class="seg two" id="snd"></div></div>`
+    app.innerHTML = `<div class="view start"><div class="seg" id="seg"></div></div>`
     seg(document.getElementById('seg'), () => { SFX.unlock(); success() })
     app.querySelectorAll('#seg [aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', 'false'))
-    sndSeg(document.getElementById('snd'))
   }
 
   const CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5.5 12.5l4 4 9-9"/></svg>'
@@ -277,7 +270,6 @@
       </div>`
     app.querySelectorAll('.cnt').forEach(count)
     document.getElementById('done').onclick = start
-    if (k === 'b') SFX.sweep(0.52)
     later(() => SFX.chime(sound().chime), CHIME_AT[k])
     // Android vibrates with the check, as the real app does. iPhone ignores this.
     later(() => navigator.vibrate && navigator.vibrate([35, 60, 45]), k === 'b' ? 650 : 300)
