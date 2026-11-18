@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0c0e">
+<title>ลองหน้ารับชั่วโมง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Geist:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #0c0c0e; --surface: #17171a; --surface-2: #222226; --surface-3: #2e2e34; --ink: #f4f4f5; --muted: #a1a1aa; --faint: #6e6e78; --line: #2a2a2f;
+    --win: #06c755; --on-win: #06210f; --bad: #ff6a5c;
+    --accent: #ff8a3d; --accent-strong: #ff8126; --accent-ink: #ffa366; --accent-soft: rgb(255 138 61 / 0.14); --on-accent: #1a0d04;
+    --sans: 'Anuphan', 'Noto Sans Thai', system-ui, sans-serif;
+    --num: 'Geist', 'Anuphan', system-ui, sans-serif;
+    --ease: cubic-bezier(0.23, 1, 0.32, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55 }
+  button, input { font: inherit; color: inherit }
+  main { max-width: 448px; margin: 0 auto; min-height: 100dvh; padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(32px + env(safe-area-inset-bottom, 0px)) }
+  main.has-bar { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)) }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums }
+  .center { text-align: center }
+
+  /* Tryout chooser (not part of the app) */
+  .pick { border: 1px dashed var(--surface-3); border-radius: 18px; padding: 12px; margin-bottom: 20px }
+  .pick p { margin: 0 0 10px; font-size: 13.5px; color: var(--muted) }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
+  .seg button { border: 0; border-radius: 12px; background: var(--surface-2); padding: 8px 4px; cursor: pointer; line-height: 1.25; transition: background-color 150ms, color 150ms }
+  .seg button b { display: block; font-size: 18px }
+  .seg button span { font-size: 12px; color: var(--muted) }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
+  .seg button[aria-pressed="true"] span { color: #52525b }
+  .seg button:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+  /* Real claim page */
+  .head { display: flex; align-items: center; gap: 16px; background: var(--surface); border-radius: 22px; padding: 16px; margin-bottom: 32px }
+  .head div { flex: 1; min-width: 0 }
+  .head p { margin: 0 }
+  .head p:first-child { font-size: 13.5px; color: var(--muted) }
+  .head p:last-child { font-weight: 600; line-height: 1.4 }
+  .chip { flex: none; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; border-radius: 99px; padding: 6px 12px; white-space: nowrap }
+  form { display: flex; flex-direction: column; gap: 20px }
+  .field { display: flex; flex-direction: column; gap: 8px }
+  .field label { font-size: 15px; font-weight: 500 }
+  .field input { height: 52px; width: 100%; min-width: 0; border: 0; border-radius: 14px; background: var(--surface-2); padding: 0 16px; font-size: 17px; outline: none; box-shadow: 0 0 0 1px transparent; transition: box-shadow 150ms }
+  .field input::placeholder { color: var(--faint) }
+  .field input:focus { box-shadow: 0 0 0 2px var(--ink) }
+  .remember { margin: 0; font-size: 14px; color: var(--muted) }
+  .btn { display: grid; place-items: center; width: 100%; min-height: 56px; border: 0; border-radius: 99px; font-weight: 600; font-size: 17px; cursor: pointer; transition: transform 150ms var(--ease) }
+  .btn:active { transform: scale(0.97) }
+  .btn.accent { background: var(--accent-strong); color: var(--on-accent); margin-top: 8px }
+  .btn.primary { background: var(--ink); color: var(--bg) }
+  .btn.ghost { background: transparent; min-height: 52px }
+
+  /* Checking */
+  .checking { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 64px 0 }
+  .pulse { position: relative; width: 112px; height: 112px; display: grid; place-items: center }
+  .pulse i { position: absolute; inset: 0; border-radius: 50%; background: var(--accent-soft); animation: ping 1.6s ease-out infinite }
+  .pulse i + i { animation-delay: 0.8s }
+  .pulse span { position: relative; width: 64px; height: 64px; border-radius: 50%; background: var(--accent-strong); color: var(--on-accent); display: grid; place-items: center }
+  .pulse svg { width: 30px; height: 30px }
+  .checking p { margin: 0; font-size: 18px; font-weight: 500 }
+  @keyframes ping { from { transform: scale(0.6); opacity: 0.9 } to { transform: scale(1.4); opacity: 0 } }
+
+  /* Success, shared */
+  .title { font-size: 22px; line-height: 1.35; font-weight: 600; margin: 0; text-wrap: balance; overflow-wrap: anywhere }
+  .date { font-size: 13.5px; color: var(--muted); margin: 4px 0 0 }
+  .disc { border-radius: 50%; background: var(--win); color: var(--on-win); display: grid; place-items: center; margin: 0 auto }
+  .chk { width: 52%; height: 52%; overflow: visible }
+  .chk path { fill: none; stroke: currentColor; stroke-width: 3.1; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0 }
+  .rest { margin-top: 20px }
+  .card { background: var(--surface); border-radius: 22px }
+  .who { display: flex; align-items: center; gap: 12px; padding: 16px }
+  .who svg { width: 44px; height: 44px; flex: none; color: var(--muted) }
+  .who .n { flex: 1; min-width: 0 }
+  .who h2 { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.35; overflow-wrap: anywhere }
+  .who .n p, .who .t p:first-child { margin: 0; font-size: 13.5px; color: var(--muted) }
+  .who .t { text-align: right; flex: none }
+  .who .t p:last-child { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.1 }
+  .roster { padding: 16px 0 8px; margin-top: 12px; overflow: hidden }
+  .roster .h { display: flex; justify-content: space-between; align-items: baseline; padding: 0 18px 12px }
+  .roster h2 { font-size: 16px; margin: 0 }
+  .roster .h span { font-size: 13.5px; color: var(--muted) }
+  .row { display: grid; grid-template-columns: 30px 82px minmax(0, 1fr) 44px; gap: 0 8px; align-items: center; font-size: 14px; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--muted) }
+  .row span:nth-child(3) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--sans) }
+  .row span:last-child { text-align: right }
+  .row.me { margin: 0 8px; border: 0; border-radius: 14px; background: var(--accent-soft); color: var(--ink); font-weight: 600; padding: 12px 10px }
+  .row.me span:first-child, .row.me span:last-child { color: var(--accent-ink) }
+  .actions { display: flex; flex-direction: column; gap: 4px; padding-top: 24px }
+
+  /* A */
+  .a .disc { width: 116px; height: 116px; margin-top: 16px }
+  .a .hrs, .b .hrs { margin: 22px 0 0; line-height: 1 }
+  .a .big, .b .big { font-size: 60px; font-weight: 700; letter-spacing: -0.04em }
+  .a .u, .b .u { font-size: 24px; font-weight: 700; margin-left: 6px }
+  .a .ok { margin: 10px 0 0; font-weight: 600; color: var(--win) }
+  .a .title, .b .title { margin-top: 18px }
+  /* B */
+  .b .draw { width: 128px; height: 128px; margin: 16px auto 0; display: block }
+  .b .ring { fill: var(--win); fill-opacity: 1; stroke: var(--win); stroke-width: 8; stroke-dasharray: 1; stroke-dashoffset: 0 }
+  .b .tick { fill: none; stroke: var(--on-win); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0 }
+  .b .hrs { color: var(--win) }
+  /* D */
+  .d .wrap { position: relative; width: 136px; margin: 16px auto 0 }
+  .d .disc { width: 136px; height: 136px }
+  .d .pill { position: absolute; left: 50%; bottom: -20px; transform: translateX(-50%); white-space: nowrap; background: var(--ink); color: var(--bg); border: 5px solid var(--bg); border-radius: 99px; padding: 4px 16px; font-weight: 700; font-size: 20px; line-height: 1.3 }
+  .d .title { margin-top: 40px }
+  /* F */
+  .f .disc { width: 152px; height: 152px; margin-top: 12px }
+  .f .say { margin: 24px 0 0; font-size: 30px; font-weight: 700; line-height: 1.2 }
+  .f .say .big { color: var(--win) }
+  .f .title { margin-top: 12px; font-size: 17px; font-weight: 500; color: var(--muted) }
+  .f .date { margin-top: 2px }
+
+  /* Motion: always plays, whatever the device motion setting (project rule). */
+  @keyframes pop { 0% { transform: scale(0.4); opacity: 0 } 55% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
+  @keyframes popx { 0% { transform: translateX(-50%) scale(0.4); opacity: 0 } 60% { transform: translateX(-50%) scale(1.1); opacity: 1 } 100% { transform: translateX(-50%) scale(1) } }
+  @keyframes draw { from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 } }
+  @keyframes fill { from { fill-opacity: 0 } to { fill-opacity: 1 } }
+  @keyframes up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+  @keyframes slide { from { opacity: 0; transform: translateX(-18px) } to { opacity: 1; transform: none } }
+  @keyframes fadein { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  .view { animation: fadein 220ms var(--ease) both }
+  .play .pop { animation: pop 460ms var(--ease) both }
+  .play .chk path { animation: draw 340ms 240ms var(--ease) both }
+  .play .up1 { animation: up 600ms 160ms var(--ease) both }
+  .play .up2 { animation: up 600ms 260ms var(--ease) both }
+  .play .up4 { animation: up 600ms 460ms var(--ease) both }
+  .play .up5 { animation: up 600ms 540ms var(--ease) both }
+  .play .row.me { animation: slide 600ms 800ms var(--ease) both }
+  .play.b .ring { animation: draw 520ms var(--ease) both, fill 220ms 440ms linear both }
+  .play.b .tick { animation: draw 300ms 600ms var(--ease) both }
+  .play.b .up1 { animation-delay: 560ms } .play.b .up2 { animation-delay: 660ms }
+  .play.b .up4 { animation-delay: 840ms } .play.b .up5 { animation-delay: 920ms } .play.b .row.me { animation-delay: 1150ms }
+  .play.d .pill { animation: popx 420ms 380ms var(--spring) both }
+  .play.f .disc { animation-duration: 560ms }
+
+  /* Tryout bar after the animation */
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: rgb(23 23 26 / 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--line);
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); transform: translateY(110%); transition: transform 380ms var(--ease) }
+  .bar.show { transform: none }
+  .bar > div { max-width: 448px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px }
+  .bar .seg button { padding: 6px 4px }
+  .bar .seg button b { font-size: 16px }
+  .bar .btn { min-height: 48px; background: var(--accent-strong); color: var(--on-accent) }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div class="bar" id="bar" aria-hidden="true">
+  <div>
+    <div class="seg" id="barseg"></div>
+    <button class="btn" type="button" id="again">แสดงใหม่</button>
+  </div>
+</div>
+
+<script>
+  const OPTIONS = [
+    { k: 'a', name: 'วงใหญ่' },
+    { k: 'b', name: 'วาดเส้น' },
+    { k: 'd', name: 'ป้ายทับวง' },
+    { k: 'f', name: 'ประโยค' },
+  ]
+  // How long each design takes to settle, so the tryout bar waits 3 s after the last thing moves.
+  const SETTLE = { a: 1500, b: 1950, d: 1500, f: 1500 }
+  const TITLE = 'บริจาคโลหิต ครั้งที่ 2/2569'
+  const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+  const state = { k: 'a', id: '', name: '', at: new Date() }
+  const app = document.getElementById('app')
+  const bar = document.getElementById('bar')
+  let timers = []
+
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+  const hhmm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const thDate = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms))
+  const clear = () => { timers.forEach(clearTimeout); timers = [] }
+
+  function seg(el, onPick) {
+    el.innerHTML = OPTIONS.map((o) => `<button type="button" data-k="${o.k}" aria-pressed="${o.k === state.k}"><b>${o.k.toUpperCase()}</b><span>${o.name}</span></button>`).join('')
+    el.onclick = (e) => {
+      const b = e.target.closest('[data-k]')
+      if (!b) return
+      state.k = b.dataset.k
+      el.querySelectorAll('[data-k]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.k === state.k))
+      onPick && onPick()
+    }
+  }
+
+  function showBar(on) {
+    if (on) seg(document.getElementById('barseg'))
+    bar.classList.toggle('show', on)
+    bar.setAttribute('aria-hidden', !on)
+    app.classList.toggle('has-bar', on)
+  }
+
+  function form() {
+    clear(); showBar(false)
+    app.innerHTML = `
+      <div class="view">
+        <div class="pick"><p>เลือกแบบที่จะลอง แล้วกรอกอะไรก็ได้</p><div class="seg" id="seg"></div></div>
+        <header class="head"><div><p>สแกนเข้าร่วมกิจกรรม</p><p>${TITLE}</p></div><span class="chip num">6 ชั่วโมง</span></header>
+        <form id="f" novalidate>
+          <div class="field"><label for="sid">รหัสนิสิต</label><input id="sid" inputmode="numeric" autocomplete="off" enterkeyhint="next" maxlength="8" placeholder="8 หลัก" value="${esc(state.id)}"></div>
+          <div class="field"><label for="sname">ชื่อ-นามสกุล (ภาษาไทย)</label><input id="sname" autocomplete="name" enterkeyhint="done" value="${esc(state.name)}"></div>
+          <p class="remember">จดจำข้อมูลบนอุปกรณ์นี้</p>
+          <button class="btn accent" type="submit">รับชั่วโมง</button>
+        </form>
+      </div>`
+    seg(document.getElementById('seg'))
+    const sid = document.getElementById('sid')
+    sid.addEventListener('input', () => { sid.value = sid.value.replace(/\D/g, '') })
+    document.getElementById('f').addEventListener('submit', (e) => {
+      e.preventDefault()
+      state.id = sid.value.trim()
+      state.name = document.getElementById('sname').value.trim()
+      document.activeElement && document.activeElement.blur()
+      checking()
+    })
+  }
+
+  function checking() {
+    clear(); showBar(false); scrollTo(0, 0)
+    app.innerHTML = `
+      <div class="view">
+        <header class="head"><div><p>สแกนเข้าร่วมกิจกรรม</p><p>${TITLE}</p></div><span class="chip num">6 ชั่วโมง</span></header>
+        <div class="checking" role="status"><div class="pulse"><i></i><i></i><span><svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M247.89 136.27a56 56 0 0 1-55.89 55.73H72a56 56 0 1 1 19.82-108.37A80 80 0 0 1 247.89 136.27ZM165.66 122.34l-32-32a8 8 0 0 0-11.32 0l-32 32a8 8 0 0 0 11.32 11.32L120 115.31V168a8 8 0 0 0 16 0v-52.69l18.34 18.35a8 8 0 0 0 11.32-11.32Z"/></svg></span></div><p>กำลังบันทึก</p></div>
+      </div>`
+    state.at = new Date()
+    later(success, 1200)
+  }
+
+  const CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5.5 12.5l4 4 9-9"/></svg>'
+  const cnt = (to, from, delay) => `<span class="cnt" data-to="${to}" data-from="${from}" data-delay="${delay}">${to}</span>`
+
+  function hero(k, title) {
+    const hrs = `<p class="hrs"><span class="big num">+${cnt(6, 0, 300)}</span><span class="u">ชั่วโมง</span></p>`
+    if (k === 'a') return `<div class="center"><div class="disc pop">${CHECK}</div><div class="up1">${hrs}<p class="ok">บันทึกชั่วโมงแล้ว</p></div><div class="up2">${title}</div></div>`
+    if (k === 'b') return `<div class="center"><svg class="draw" viewBox="0 0 128 128" aria-hidden="true"><g transform="rotate(-90 64 64)"><circle class="ring" cx="64" cy="64" r="58" pathLength="1"/></g><path class="tick" pathLength="1" d="M38 66l18 18 36-38"/></svg><div class="up1">${hrs.replace('data-delay="300"', 'data-delay="600"')}</div><div class="up2">${title}</div></div>`
+    if (k === 'd') return `<div class="center"><div class="wrap"><div class="disc pop">${CHECK}</div><span class="pill num">+${cnt(6, 0, 380)} ชั่วโมง</span></div><div class="up2">${title}</div></div>`
+    return `<div class="center"><div class="disc pop">${CHECK}</div><p class="say up1">ได้รับ <span class="big num">${cnt(6, 0, 300)}</span> ชั่วโมง</p><div class="up2">${title}</div></div>`
+  }
+
+  function success() {
+    clear(); showBar(false); scrollTo(0, 0)
+    const k = state.k
+    const id = state.id || '66310001'
+    const name = state.name || 'นิสิต ทดลอง'
+    const at = state.at
+    const t1 = new Date(at - 120000), t2 = new Date(at - 60000)
+    const title = `<h1 class="title">${TITLE}</h1><p class="date num">${thDate(at)} เวลา ${hhmm(at)} น.</p>`
+    app.innerHTML = `
+      <div class="${k} play">
+        ${hero(k, title)}
+        <div class="rest">
+          <section class="card who up4">
+            <svg viewBox="0 0 256 256" aria-hidden="true"><path fill="currentColor" d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24Zm0 48a40 40 0 1 1-40 40 40 40 0 0 1 40-40Zm0 144a87.65 87.65 0 0 1-65.4-29.27C73.75 167.14 98.15 152 128 152s54.25 15.14 65.4 34.73A87.65 87.65 0 0 1 128 216Z"/></svg>
+            <div class="n"><h2>${esc(name)}</h2><p class="num">${esc(id)}</p></div>
+            <div class="t"><p>ชั่วโมงสะสม</p><p class="num">${cnt(19, 13, k === 'b' ? 850 : 550)}</p></div>
+          </section>
+          <section class="card roster up5">
+            <div class="h"><h2>รายชื่อในงาน</h2><span><span class="num">128</span> คน</span></div>
+            <div class="row num"><span>126</span><span>65034410</span><span>กนกพร ศรีสุข</span><span>${hhmm(t1)}</span></div>
+            <div class="row num"><span>127</span><span>65021187</span><span>สมชาย ใจดี</span><span>${hhmm(t2)}</span></div>
+            <div class="row me num"><span>128</span><span>${esc(id)}</span><span>${esc(name)}</span><span>${hhmm(at)}</span></div>
+          </section>
+          <div class="actions up5"><button class="btn primary" type="button" id="done">เสร็จสิ้น</button><button class="btn ghost" type="button">ดูรายชื่อทั้งหมด</button></div>
+        </div>
+      </div>`
+    app.querySelectorAll('.cnt').forEach(count)
+    document.getElementById('done').onclick = form
+    // Android vibrates with the check, as the real app does. iPhone ignores this.
+    later(() => navigator.vibrate && navigator.vibrate([35, 60, 45]), k === 'b' ? 650 : 300)
+    later(() => showBar(true), SETTLE[k] + 3000)
+  }
+
+  function count(el) {
+    const to = +el.dataset.to, from = +el.dataset.from, delay = +el.dataset.delay, dur = 820
+    el.textContent = from
+    const t0 = performance.now() + delay
+    const tick = (now) => {
+      const p = Math.min(1, Math.max(0, (now - t0) / dur))
+      el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)))
+      if (p < 1 && el.isConnected) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
+  seg(document.getElementById('barseg'))
+  document.getElementById('again').onclick = success
+  form()
+</script>
+</body>
+</html>
