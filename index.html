@@ -31,7 +31,7 @@
   .pick { border: 1px dashed var(--surface-3); border-radius: 18px; padding: 12px; margin-bottom: 20px }
   .pick p { margin: 0 0 10px; font-size: 13.5px; color: var(--muted) }
   .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
-  .seg button { border: 0; border-radius: 12px; background: var(--surface-2); padding: 8px 4px; cursor: pointer; line-height: 1.25; transition: background-color 150ms, color 150ms }
+  .seg button { border: 0; border-radius: 12px; background: var(--surface-2); padding: 8px 4px; min-height: 48px; cursor: pointer; line-height: 1.25; transition: background-color 150ms, color 150ms }
   .seg button b { display: block; font-size: 18px }
   .seg button span { font-size: 12px; color: var(--muted) }
   .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
@@ -160,6 +160,7 @@
   </div>
 </div>
 
+<script src="sfx.js"></script>
 <script>
   const OPTIONS = [
     { k: 'a', name: 'วงใหญ่' },
@@ -183,7 +184,7 @@
   const clear = () => { timers.forEach(clearTimeout); timers = [] }
 
   function seg(el, onPick) {
-    el.innerHTML = OPTIONS.map((o) => `<button type="button" data-k="${o.k}" aria-pressed="${o.k === state.k}"><b>${o.k.toUpperCase()}</b><span>${o.name}</span></button>`).join('')
+    el.innerHTML = OPTIONS.map((o) => `<button type="button" data-k="${o.k}" aria-pressed="${o.k === state.k}"><b>${o.k.toUpperCase()}</b></button>`).join('')
     el.onclick = (e) => {
       const b = e.target.closest('[data-k]')
       if (!b) return
@@ -204,7 +205,7 @@
     clear(); showBar(false)
     app.innerHTML = `
       <div class="view">
-        <div class="pick"><p>เลือกแบบที่จะลอง แล้วกรอกอะไรก็ได้</p><div class="seg" id="seg"></div></div>
+        <div class="pick"><div class="seg" id="seg"></div></div>
         <header class="head"><div><p>สแกนเข้าร่วมกิจกรรม</p><p>${TITLE}</p></div><span class="chip num">6 ชั่วโมง</span></header>
         <form id="f" novalidate>
           <div class="field"><label for="sid">รหัสนิสิต</label><input id="sid" inputmode="numeric" autocomplete="off" enterkeyhint="next" maxlength="8" placeholder="8 หลัก" value="${esc(state.id)}"></div>
@@ -221,6 +222,7 @@
       state.id = sid.value.trim()
       state.name = document.getElementById('sname').value.trim()
       document.activeElement && document.activeElement.blur()
+      SFX.unlock()
       checking()
     })
   }
@@ -237,12 +239,17 @@
   }
 
   const CHECK = '<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path pathLength="1" d="M5.5 12.5l4 4 9-9"/></svg>'
-  const cnt = (to, from, delay) => `<span class="cnt" data-to="${to}" data-from="${from}" data-delay="${delay}">${to}</span>`
+  const cnt = (to, from, delay, tick) => `<span class="cnt" data-to="${to}" data-from="${from}" data-delay="${delay}"${tick ? ' data-tick' : ''}>${to}</span>`
+
+  // Sound per design. The number only ticks where it is the big thing on screen (A and B). ?chime=bell&tick=wood overrides for trying others.
+  const q = new URLSearchParams(location.search)
+  const SOUND = { chime: q.get('chime') || 'coin', tick: q.get('tick') || 'rise' }
+  const CHIME_AT = { a: 220, b: 600, d: 220, f: 220 }
 
   function hero(k, title) {
-    const hrs = `<p class="hrs"><span class="big num">+${cnt(6, 0, 300)}</span><span class="u">ชั่วโมง</span></p>`
-    if (k === 'a') return `<div class="center"><div class="disc pop">${CHECK}</div><div class="up1">${hrs}<p class="ok">บันทึกชั่วโมงแล้ว</p></div><div class="up2">${title}</div></div>`
-    if (k === 'b') return `<div class="center"><svg class="draw" viewBox="0 0 128 128" aria-hidden="true"><g transform="rotate(-90 64 64)"><circle class="ring" cx="64" cy="64" r="58" pathLength="1"/></g><path class="tick" pathLength="1" d="M38 66l18 18 36-38"/></svg><div class="up1">${hrs.replace('data-delay="300"', 'data-delay="600"')}</div><div class="up2">${title}</div></div>`
+    const hrs = (delay) => `<p class="hrs"><span class="big num">+${cnt(6, 0, delay, true)}</span><span class="u">ชั่วโมง</span></p>`
+    if (k === 'a') return `<div class="center"><div class="disc pop">${CHECK}</div><div class="up1">${hrs(300)}<p class="ok">บันทึกชั่วโมงแล้ว</p></div><div class="up2">${title}</div></div>`
+    if (k === 'b') return `<div class="center"><svg class="draw" viewBox="0 0 128 128" aria-hidden="true"><g transform="rotate(-90 64 64)"><circle class="ring" cx="64" cy="64" r="58" pathLength="1"/></g><path class="tick" pathLength="1" d="M38 66l18 18 36-38"/></svg><div class="up1">${hrs(600)}</div><div class="up2">${title}</div></div>`
     if (k === 'd') return `<div class="center"><div class="wrap"><div class="disc pop">${CHECK}</div><span class="pill num">+${cnt(6, 0, 380)} ชั่วโมง</span></div><div class="up2">${title}</div></div>`
     return `<div class="center"><div class="disc pop">${CHECK}</div><p class="say up1">ได้รับ <span class="big num">${cnt(6, 0, 300)}</span> ชั่วโมง</p><div class="up2">${title}</div></div>`
   }
@@ -275,6 +282,8 @@
       </div>`
     app.querySelectorAll('.cnt').forEach(count)
     document.getElementById('done').onclick = form
+    if (k === 'b') SFX.sweep(0.52)
+    later(() => SFX.chime(SOUND.chime), CHIME_AT[k])
     // Android vibrates with the check, as the real app does. iPhone ignores this.
     later(() => navigator.vibrate && navigator.vibrate([35, 60, 45]), k === 'b' ? 650 : 300)
     later(() => showBar(true), SETTLE[k] + 3000)
@@ -282,18 +291,22 @@
 
   function count(el) {
     const to = +el.dataset.to, from = +el.dataset.from, delay = +el.dataset.delay, dur = 820
+    const ticks = el.hasAttribute('data-tick') && SOUND.tick !== 'none'
+    let last = from
     el.textContent = from
     const t0 = performance.now() + delay
     const tick = (now) => {
       const p = Math.min(1, Math.max(0, (now - t0) / dur))
-      el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)))
+      const v = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)))
+      if (v !== last) { last = v; if (ticks) SFX.tick(SOUND.tick, v) }
+      el.textContent = v
       if (p < 1 && el.isConnected) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
   }
 
   seg(document.getElementById('barseg'))
-  document.getElementById('again').onclick = success
+  document.getElementById('again').onclick = () => { SFX.unlock(); success() }
   form()
 </script>
 </body>
